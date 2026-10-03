@@ -1,0 +1,27 @@
+{% extends '@Admin/layout.html.twig' %}
+
+{% block page_title %}{{ 'bank.files_title'|trans({}, 'ledger') }}{% endblock %}
+
+{% block content_header %}
+<div class="admin-header">
+    <span class="admin-header-icon"><i class="fa-solid fa-building-columns"></i></span>
+    <div class="admin-header-titles">
+        <h1>{{ 'bank.files_title'|trans({}, 'ledger') }}</h1>
+        <div class="admin-header-subtitle">{{ book.name }} · {{ 'bank.files_lead'|trans({}, 'ledger') }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{{ include('@Ledger/admin/_style.html.twig') }}
+<form method="post" class="ledger card" style="max-width: 36rem; display: grid; gap: .9rem">
+    <input type="hidden" name="_token" value="{{ csrf_token('ledger_bank_connect') }}">
+    <label style="display: grid; gap: .3rem">{{ 'bank.account_name'|trans({}, 'ledger') }}
+        <input class="form-control" name="name" required placeholder="Compte courant">
+    </label>
+    <label style="display: grid; gap: .3rem">IBAN
+        <input class="form-control" name="iban" placeholder="FR76 …">
+    </label>
+    <div><button class="btn btn-primary" type="submit">{{ 'bank.files_submit'|trans({}, 'ledger') }}</button></div>
+</form>
+{% endblock %}

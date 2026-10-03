@@ -1,0 +1,46 @@
+{% extends '@Admin/layout.html.twig' %}
+
+{% block page_title %}{{ 'report.open_items'|trans({}, 'ledger') }} · {{ book.name }}{% endblock %}
+
+{% block content_header %}
+<div class="admin-header">
+    <span class="admin-header-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+    <div class="admin-header-titles">
+        <h1>{{ 'report.open_items'|trans({}, 'ledger') }} · {{ book.name }}</h1>
+        <div class="admin-header-subtitle">{{ 'report.open_items_lead'|trans({account: prefix}, 'ledger') }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{{ include('@Ledger/admin/_style.html.twig') }}
+<div class="ledger">
+    {{ include('@Ledger/admin/_report_nav.html.twig', {current: 'ledger_admin_open_items', year: null}) }}
+    <div class="toolbar">
+        {% for p in ['411', '401', '455', '5112'] %}
+            <a class="btn btn-sm {{ p == prefix ? 'btn-primary' : 'btn-secondary' }}" href="{{ path('ledger_admin_open_items', {book: book.id, account: p}) }}">{{ p }}</a>
+        {% endfor %}
+    </div>
+    {% for group in report.parties %}
+    <div class="card">
+        <div class="toolbar" style="justify-content: space-between">
+            <strong>{{ group.name }} <span class="muted">{{ group.account }}</span></strong>
+            <strong class="{{ group.balance > 0 ? 'out' : 'in' }}">{{ group.balance|ledger_money(book.currency) }}</strong>
+        </div>
+        <table>
+            {% for item in group.items %}
+            <tr>
+                <td>{{ item.entry.date|date('d/m/Y') }}</td><td>{{ item.entry.journal.code }}</td><td>{{ item.entry.piece }}</td><td>{{ item.label ?? item.entry.label }}</td>
+                <td class="num">{{ item.debit|ledger_amount }}</td><td class="num">{{ item.credit|ledger_amount }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <div class="card muted">{{ 'report.no_open_items'|trans({}, 'ledger') }}</div>
+    {% endfor %}
+    {% if report.parties is not empty %}
+    <div class="card"><strong>{{ 'report.total'|trans({}, 'ledger') }} :</strong> {{ report.total|ledger_money(book.currency) }}</div>
+    {% endif %}
+</div>
+{% endblock %}

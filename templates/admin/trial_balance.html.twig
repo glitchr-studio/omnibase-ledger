@@ -1,0 +1,48 @@
+{% extends '@Admin/layout.html.twig' %}
+
+{% block page_title %}{{ 'report.trial_balance'|trans({}, 'ledger') }} · {{ book.name }}{% endblock %}
+
+{% block content_header %}
+<div class="admin-header">
+    <span class="admin-header-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+    <div class="admin-header-titles">
+        <h1>{{ 'report.trial_balance'|trans({}, 'ledger') }} · {{ book.name }}</h1>
+        <div class="admin-header-subtitle">{{ 'report.period'|trans({from: from|date('d/m/Y'), to: to|date('d/m/Y')}, 'ledger') }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{{ include('@Ledger/admin/_style.html.twig') }}
+<div class="ledger">
+    {{ include('@Ledger/admin/_report_nav.html.twig', {current: 'ledger_admin_trial_balance'}) }}
+    {{ include('@Ledger/admin/_period.html.twig') }}
+    <div class="card">
+        <table>
+            <thead><tr>
+                <th>{{ 'report.account'|trans({}, 'ledger') }}</th><th>{{ 'report.label'|trans({}, 'ledger') }}</th>
+                <th class="num">{{ 'report.debit'|trans({}, 'ledger') }}</th><th class="num">{{ 'report.credit'|trans({}, 'ledger') }}</th>
+                <th class="num">{{ 'report.debit_balance'|trans({}, 'ledger') }}</th><th class="num">{{ 'report.credit_balance'|trans({}, 'ledger') }}</th>
+            </tr></thead>
+            <tbody>
+            {% for row in report.rows %}
+                <tr>
+                    <td><a href="{{ path('ledger_admin_general_ledger', {book: book.id, account: row.number, from: from|date('Y-m-d'), to: to|date('Y-m-d')}) }}">{{ row.number }}</a></td>
+                    <td>{{ row.label }}</td>
+                    <td class="num">{{ row.debit|ledger_amount }}</td><td class="num">{{ row.credit|ledger_amount }}</td>
+                    <td class="num">{{ row.debitBalance|ledger_amount }}</td><td class="num">{{ row.creditBalance|ledger_amount }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" class="muted">{{ 'report.empty'|trans({}, 'ledger') }}</td></tr>
+            {% endfor %}
+            </tbody>
+            <tfoot><tr>
+                <th colspan="2">{{ 'report.total'|trans({}, 'ledger') }}{% if not report.balanced %} <span class="pill unmatched">{{ 'report.unbalanced'|trans({}, 'ledger') }}</span>{% endif %}</th>
+                <th class="num">{{ report.totals.debit|ledger_amount }}</th><th class="num">{{ report.totals.credit|ledger_amount }}</th>
+                <th class="num">{{ report.totals.debitBalance|ledger_amount }}</th><th class="num">{{ report.totals.creditBalance|ledger_amount }}</th>
+            </tr></tfoot>
+        </table>
+    </div>
+    <div class="card"><strong>{{ 'report.result'|trans({}, 'ledger') }} :</strong> <span class="{{ report.result >= 0 ? 'in' : 'out' }}">{{ report.result|ledger_money(book.currency) }}</span></div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends '@Admin/layout.html.twig' %}
+
+{% block page_title %}{{ 'bank.upload'|trans({}, 'ledger') }} · {{ account.name }}{% endblock %}
+
+{% block content_header %}
+<div class="admin-header">
+    <span class="admin-header-icon"><i class="fa-solid fa-file-arrow-up"></i></span>
+    <div class="admin-header-titles">
+        <h1>{{ 'bank.upload'|trans({}, 'ledger') }} · {{ account.name }}</h1>
+        <div class="admin-header-subtitle">{{ 'bank.upload_lead'|trans({}, 'ledger') }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{{ include('@Ledger/admin/_style.html.twig') }}
+<div class="ledger" style="max-width: 40rem">
+    {% if not available %}
+    <div class="card">{{ 'bank.no_omnibank'|trans({}, 'ledger') }}</div>
+    {% else %}
+    <form method="post" enctype="multipart/form-data" class="card" style="display: grid; gap: .9rem">
+        <input type="hidden" name="_token" value="{{ csrf_token('ledger_upload_' ~ account.id) }}">
+        <label style="display: grid; gap: .3rem">{{ 'bank.statement'|trans({}, 'ledger') }}
+            <input class="form-control" type="file" name="statement" accept=".xml,.ofx,.qfx,.csv,.txt" required>
+            <small class="muted">{{ 'bank.statement_help'|trans({}, 'ledger') }}</small>
+        </label>
+        <div><button class="btn btn-primary" type="submit"><i class="fa-solid fa-file-arrow-up"></i> {{ 'bank.upload_submit'|trans({}, 'ledger') }}</button></div>
+    </form>
+    {% endif %}
+    <div class="muted">{{ account.account }} · {{ account.journal }}{% if account.lastSyncedAt %} · {{ 'bank.last_sync'|trans({date: account.lastSyncedAt|date('d/m/Y H:i')}, 'ledger') }}{% endif %}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{# One side of a statement - produits or charges, actif or passif: its groups
+   (those with an amount), their accounts and totals, and the N-1 column when
+   `compare`. `link` (route parameters, or null) makes an account number open
+   the general ledger. #}
+<table class="statement">
+    <thead><tr>
+        <th colspan="2">{{ title }}</th>
+        <th class="num">{{ 'report.current'|trans({}, 'ledger') }}</th>
+        {% if compare %}<th class="num">{{ 'report.previous'|trans({}, 'ledger') }}</th>{% endif %}
+    </tr></thead>
+    {% for group in groups %}{% if group.lines is not empty %}
+    <tbody>
+        <tr>
+            <th colspan="2">{{ group.label }}</th>
+            <th class="num">{{ group.total|ledger_amount ?: '0,00' }}</th>
+            {% if compare %}<th class="num">{{ group.previous|ledger_amount ?: '0,00' }}</th>{% endif %}
+        </tr>
+        {% for line in group.lines %}
+        <tr>
+            <td>{% if line.number and link is not null %}<a href="{{ path('ledger_admin_general_ledger', link|merge({account: line.number})) }}">{{ line.number }}</a>{% else %}{{ line.number }}{% endif %}</td>
+            <td>{{ line.label }}</td>
+            <td class="num">{{ line.amount|ledger_amount ?: '0,00' }}</td>
+            {% if compare %}<td class="num muted">{{ line.previous|ledger_amount }}</td>{% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+    {% endif %}{% endfor %}
+    <tfoot><tr>
+        <th colspan="2">{{ total_label }}</th>
+        <th class="num">{{ total|ledger_amount ?: '0,00' }}</th>
+        {% if compare %}<th class="num">{{ previous_total|ledger_amount ?: '0,00' }}</th>{% endif %}
+    </tr></tfoot>
+</table>

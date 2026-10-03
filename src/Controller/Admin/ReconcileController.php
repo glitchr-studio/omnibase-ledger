@@ -1,0 +1,148 @@
+<?php
+
+namespace Base\Ledger\Controller\Admin;
+
+use Base\Ledger\Entity\BankAccount;
+use Base\Ledger\Entity\BankLine;
+use Base\Ledger\Entity\EntryLine;
+use Base\Ledger\Entity\Party;
+use Base\Ledger\Entity\ReconciliationRule;
+use Base\Ledger\Enum\BankLineStatus;
+use Base\Ledger\Exception\LedgerException;
+use Base\Ledger\Reconciliation\Matcher;
+use Base\Ledger\Reconciliation\Reconciler;
+use Base\Ledger\Reconciliation\Suggestion;
+use Base\Ledger\Repository\BankLineRepository;
+use Base\Ledger\Repository\PartyRepository;
+use Base\Ledger\Repository\ReconciliationRuleRepository;
+use Base\Ledger\Security\Voter\LedgerVoter;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+/**
+ * A bank account's reconciliation: the lines still to place with what they
+ * may settle, best first - accept a suggestion, pick the open items (or a
+ * rule, or a party) by hand, ignore the line -, and the lines placed
+ * lately, which can be undone. Every change is a POST with its token.
+ */
+#[IsGranted(LedgerVoter::VIEW)]
+#[Route('/admin/ledger')]
+class ReconcileController extends AbstractLedgerPageController
+{
+    public function __construct(
+        private readonly Matcher $matcher,
+        private readonly Reconciler $reconciler,
+        private readonly BankLineRepository $bankLines,
+        private readonly ReconciliationRuleRepository $rules,
+        private readonly PartyRepository $parties,
+    ) {
+    }
+
+    #[Route('/reconcile/{bankAccount}', name: 'ledger_admin_reconcile', requirements: ['bankAccount' => '\d+'], methods: ['GET'])]
+    public function index(int $bankAccount): Response
+    {
+        $account = $this->load(BankAccount::class, $bankAccount);
+        $book = $account->getBook();
+        $openItems = $this->matcher->openItems($book);
+
+        $pending = [];
+        foreach ($this->bankLines->pending($account) as $line) {
+            $pending[] = [
+                'line' => $line,
+                'suggestions' => \array_slice($this->matcher->suggest($line, $openItems), 0, 5),
+                'candidates' => array_values(array_filter($openItems, fn (EntryLine $item) => $line->getAmount() > 0 ? $item->getNet() > 0 : $item->getNet() < 0)),
+            ];
+        }
+
+        return $this->page('@Ledger/admin/reconcile.html.twig', [
+            'account' => $account,
+            'book' => $book,
+            'pending' => $pending,
+            'done' => array_values(array_filter($this->bankLines->latest($account, 40), fn (BankLine $line) => !$line->getStatus()->isPending())),
+            'rules' => $this->rules->forBook($book),
+            'parties' => $this->parties->findBy(['book' => $book], ['name' => 'ASC']),
+            'threshold' => $this->reconciler->getThreshold(),
+            'can_manage' => $this->isGranted(LedgerVoter::MANAGE, $book),
+        ]);
+    }
+
+    /** A suggestion accepted, or the open items / rule / party picked by hand. */
+    #[Route('/reconcile/line/{line}/apply', name: 'ledger_admin_reconcile_apply', requirements: ['line' => '\d+'], methods: ['POST'])]
+    public function apply(Request $request, int $line): RedirectResponse
+    {
+        $bankLine = $this->load(BankLine::class, $line, LedgerVoter::MANAGE);
+        $this->assertPostToken($request, 'ledger_line_'.$bankLine->getId());
+        $book = $bankLine->getBook();
+
+        $items = [];
+        foreach ($request->request->all('items') as $id) {
+            $item = $this->entityManager->find(EntryLine::class, (int) $id);
+            if (null !== $item && $item->getBook() === $book) {
+                $items[] = $item;
+            }
+        }
+        $rule = $request->request->getInt('rule') > 0 ? $this->entityManager->find(ReconciliationRule::class, $request->request->getInt('rule')) : null;
+        $party = $request->request->getInt('party') > 0 ? $this->entityManager->find(Party::class, $request->request->getInt('party')) : null;
+        if ((null !== $rule && $rule->getBook() !== $book) || (null !== $party && $party->getBook() !== $book)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        try {
+            $entry = $this->reconciler->apply($bankLine, new Suggestion(1.0, 'Choisi à la main', $items, $rule, $party ?? $rule?->getParty()));
+            $this->addFlash('success', sprintf('%s : passée en %s (écriture %s).', $bankLine->getLabel(), $entry->getJournal()->getCode(), $entry->getNumber()));
+        } catch (LedgerException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->toPage($bankLine);
+    }
+
+    #[Route('/reconcile/line/{line}/ignore', name: 'ledger_admin_reconcile_ignore', requirements: ['line' => '\d+'], methods: ['POST'])]
+    public function ignore(Request $request, int $line): RedirectResponse
+    {
+        $bankLine = $this->load(BankLine::class, $line, LedgerVoter::MANAGE);
+        $this->assertPostToken($request, 'ledger_line_'.$bankLine->getId());
+        try {
+            $this->reconciler->ignore($bankLine);
+        } catch (LedgerException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->toPage($bankLine);
+    }
+
+    #[Route('/reconcile/line/{line}/undo', name: 'ledger_admin_reconcile_undo', requirements: ['line' => '\d+'], methods: ['POST'])]
+    public function undo(Request $request, int $line): RedirectResponse
+    {
+        $bankLine = $this->load(BankLine::class, $line, LedgerVoter::MANAGE);
+        $this->assertPostToken($request, 'ledger_line_'.$bankLine->getId());
+        try {
+            $wasReconciled = BankLineStatus::RECONCILED === $bankLine->getStatus();
+            $this->reconciler->undo($bankLine);
+            $this->addFlash('success', $wasReconciled ? sprintf('%s : écriture extournée, ligne à rapprocher.', $bankLine->getLabel()) : sprintf('%s : ligne à rapprocher.', $bankLine->getLabel()));
+        } catch (LedgerException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->toPage($bankLine);
+    }
+
+    #[Route('/reconcile/{bankAccount}/auto', name: 'ledger_admin_reconcile_auto', requirements: ['bankAccount' => '\d+'], methods: ['POST'])]
+    public function auto(Request $request, int $bankAccount): RedirectResponse
+    {
+        $account = $this->load(BankAccount::class, $bankAccount, LedgerVoter::MANAGE);
+        $this->assertPostToken($request, 'ledger_reconcile_auto_'.$account->getId());
+        $applied = $this->reconciler->autoReconcile($account);
+        $this->addFlash($applied > 0 ? 'success' : 'info', sprintf('%d ligne(s) rapprochée(s) automatiquement.', $applied));
+
+        return $this->redirectToRoute('ledger_admin_reconcile', ['bankAccount' => $account->getId()]);
+    }
+
+    private function toPage(BankLine $line): RedirectResponse
+    {
+        return $this->redirectToRoute('ledger_admin_reconcile', ['bankAccount' => $line->getBankAccount()->getId(), '_fragment' => 'line-'.$line->getId()]);
+    }
+}

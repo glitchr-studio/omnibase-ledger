@@ -1,0 +1,74 @@
+{
+    "name": "omnibase/ledger",
+    "type": "symfony-bundle",
+    "description": "Double-entry accounting for omnibase: books, a French chart of accounts, journals, parties and lettering, bank feeds through glitchr/omnibank, reconciliation with ranked suggestions, trial balance, general ledger, income statement, balance sheet and the FEC export",
+    "keywords": [
+        "symfony",
+        "accounting",
+        "ledger",
+        "double-entry",
+        "bank",
+        "reconciliation",
+        "lettering",
+        "fec",
+        "pcg"
+    ],
+    "license": "LGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Marco Meyer",
+            "email": "marco.meyer@glitchr.io"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Base\\Ledger\\": "./src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\Base\\Ledger\\": "./tests"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "ext-sodium": "*",
+        "doctrine/orm": "^2.15|^3.0",
+        "glitchr/omnibank": "1.x-dev",
+        "glitchr/omnibase": "3.0.*-dev",
+        "omnibase/admin": "dev-main",
+        "symfony/config": "^6.0|^7.0|^8.0",
+        "symfony/console": "^6.0|^7.0|^8.0",
+        "symfony/dependency-injection": "^6.0|^7.0|^8.0",
+        "symfony/http-kernel": "^6.0|^7.0|^8.0",
+        "symfony/security-bundle": "^6.0|^7.0|^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5|^11.0|^12.0",
+        "symfony/framework-bundle": "^6.0|^7.0|^8.0",
+        "symfony/twig-bundle": "^6.0|^7.0|^8.0"
+    },
+    "suggest": {
+        "omnibank/files": "Statement files (CAMT.053, OFX, CSV): configure it as the \"files\" gateway to upload statements",
+        "omnibank/qonto": "Qonto accounts synced through its API",
+        "omnibank/powens": "Bank aggregation through Powens (consent pages, webhooks)",
+        "omnibank/bridge": "Bank aggregation through Bridge (consent pages, webhooks)",
+        "symfony/lock": "Entry numbering one process at a time per book (LockFactory), on top of the unique key"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "preferred-install": {
+            "*": "dist"
+        },
+        "sort-packages": true,
+        "allow-plugins": {
+            "glitchr/base-plugin": true,
+            "glitchr/doctrine-dc2type": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

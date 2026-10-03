@@ -1,0 +1,149 @@
+{% extends '@Admin/layout.html.twig' %}
+
+{% block page_title %}{{ 'reconcile.title'|trans({}, 'ledger') }} · {{ account.name }}{% endblock %}
+
+{% block content_header %}
+<div class="admin-header">
+    <span class="admin-header-icon"><i class="fa-solid fa-code-merge"></i></span>
+    <div class="admin-header-titles">
+        <h1>{{ 'reconcile.title'|trans({}, 'ledger') }} · {{ account.name }}</h1>
+        <div class="admin-header-subtitle">{{ book.name }}{% if account.iban %} · {{ account.iban|ledger_iban }}{% endif %} · {{ account.account }} · {{ 'reconcile.journal'|trans({}, 'ledger') }} {{ account.journal.code }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{{ include('@Ledger/admin/_style.html.twig') }}
+<style>
+    .ledger-line { display: grid; gap: .6rem; }
+    .ledger-line-head { display: flex; flex-wrap: wrap; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .ledger-line-head strong { font-size: 1.05rem; }
+    .ledger-suggestion { display: flex; gap: .75rem; align-items: center; justify-content: space-between; padding: .5rem .75rem; border-radius: .5rem; background: rgba(127,127,127,.07); }
+    .ledger-suggestion.is-sure { background: rgba(31,138,76,.1); }
+    .ledger-suggestion small { display: block; opacity: .75; }
+    .ledger-score { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3rem; }
+    .ledger-pick { display: grid; gap: .5rem; padding-top: .5rem; }
+    .ledger-pick .items { max-height: 16rem; overflow: auto; }
+    .ledger-pick .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media (max-width: 720px) { .ledger-pick .row { grid-template-columns: 1fr; } .ledger-suggestion { flex-wrap: wrap; } }
+</style>
+<div class="ledger">
+    <div class="toolbar">
+        {% if can_manage %}
+        <form method="post" action="{{ path('ledger_admin_reconcile_auto', {bankAccount: account.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('ledger_reconcile_auto_' ~ account.id) }}">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ 'reconcile.auto'|trans({}, 'ledger') }}</button>
+        </form>
+        <a class="btn btn-secondary" href="{{ path('ledger_admin_bank_upload', {bankAccount: account.id}) }}"><i class="fa-solid fa-file-arrow-up"></i> {{ 'bank.upload'|trans({}, 'ledger') }}</a>
+        {% endif %}
+        <span class="muted">{{ 'reconcile.pending'|trans({count: pending|length}, 'ledger') }} · {{ 'reconcile.threshold'|trans({score: (threshold * 100)|round}, 'ledger') }}</span>
+    </div>
+
+    {% for row in pending %}
+    {% set line = row.line %}
+    <div class="card ledger-line" id="line-{{ line.id }}">
+        <div class="ledger-line-head">
+            <div>
+                <strong>{{ line.label }}</strong>
+                <div class="muted">{{ line.bookedOn|date('d/m/Y') }}{% if line.counterpartyName %} · {{ line.counterpartyName }}{% endif %}{% if line.counterpartyIban %} · {{ line.counterpartyIban|ledger_iban }}{% endif %}{% if line.reference %} · {{ line.reference }}{% endif %}</div>
+            </div>
+            <div>
+                <strong class="{{ line.amount > 0 ? 'in' : 'out' }}">{{ line.amount|ledger_money(line.currency) }}</strong>
+                <span class="pill {{ line.status.value }}">{{ ('status.' ~ line.status.value)|trans({}, 'ledger') }}</span>
+            </div>
+        </div>
+
+        {% for suggestion in row.suggestions %}
+        <div class="ledger-suggestion{{ suggestion.score >= threshold ? ' is-sure' }}">
+            <span class="ledger-score">{{ (suggestion.score * 100)|round }} %</span>
+            <div style="flex: 1">
+                {{ suggestion.reason }}
+                <small>
+                {% for item in suggestion.openItems %}{{ item.entry.piece ?? item.entry.label }} ({{ item.entry.date|date('d/m/Y') }}, {{ item.net|ledger_money(book.currency) }}){{ not loop.last ? ' · ' }}{% endfor %}
+                {% if suggestion.openItems is empty and suggestion.rule %}{{ 'reconcile.rule_to'|trans({account: suggestion.rule.account}, 'ledger') }}{% endif %}
+                {% if suggestion.openItems is empty and not suggestion.rule and suggestion.party %}{{ 'reconcile.on_account'|trans({account: suggestion.party.accountNumber}, 'ledger') }}{% endif %}
+                </small>
+            </div>
+            {% if can_manage %}
+            <form method="post" class="inline" action="{{ path('ledger_admin_reconcile_apply', {line: line.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('ledger_line_' ~ line.id) }}">
+                {% for item in suggestion.openItems %}<input type="hidden" name="items[]" value="{{ item.id }}">{% endfor %}
+                {% if suggestion.rule %}<input type="hidden" name="rule" value="{{ suggestion.rule.id }}">{% endif %}
+                {% if suggestion.party %}<input type="hidden" name="party" value="{{ suggestion.party.id }}">{% endif %}
+                <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-check"></i> {{ 'reconcile.accept'|trans({}, 'ledger') }}</button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="muted">{{ 'reconcile.nothing'|trans({}, 'ledger') }}</div>
+        {% endfor %}
+
+        {% if can_manage %}
+        <details>
+            <summary>{{ 'reconcile.pick'|trans({}, 'ledger') }}</summary>
+            <form method="post" class="ledger-pick" action="{{ path('ledger_admin_reconcile_apply', {line: line.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('ledger_line_' ~ line.id) }}">
+                {% if row.candidates is not empty %}
+                <div class="items">
+                    <table>
+                        {% for item in row.candidates|slice(0, 80) %}
+                        <tr>
+                            <td><input type="checkbox" name="items[]" value="{{ item.id }}" id="item-{{ line.id }}-{{ item.id }}"></td>
+                            <td><label for="item-{{ line.id }}-{{ item.id }}">{{ item.entry.date|date('d/m/Y') }}</label></td>
+                            <td>{{ item.account.number }}</td>
+                            <td>{{ item.party ?? '' }}</td>
+                            <td>{{ item.entry.piece ?? item.entry.label }}</td>
+                            <td class="num">{{ item.net|ledger_money(book.currency) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% endif %}
+                <div class="row">
+                    <label>{{ 'reconcile.or_rule'|trans({}, 'ledger') }}
+                        <select class="form-control" name="rule"><option value="">—</option>{% for rule in rules %}<option value="{{ rule.id }}">{{ rule.name }} → {{ rule.account.number }}</option>{% endfor %}</select>
+                    </label>
+                    <label>{{ 'reconcile.or_party'|trans({}, 'ledger') }}
+                        <select class="form-control" name="party"><option value="">—</option>{% for party in parties %}<option value="{{ party.id }}">{{ party.name }} ({{ party.accountNumber }})</option>{% endfor %}</select>
+                    </label>
+                </div>
+                <div class="toolbar">
+                    <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-check"></i> {{ 'reconcile.post'|trans({}, 'ledger') }}</button>
+                </div>
+            </form>
+            <form method="post" class="inline" action="{{ path('ledger_admin_reconcile_ignore', {line: line.id}) }}" data-confirm="{{ 'reconcile.ignore_confirm'|trans({}, 'ledger') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('ledger_line_' ~ line.id) }}">
+                <button class="btn btn-sm btn-secondary" type="submit"><i class="fa-solid fa-eye-slash"></i> {{ 'reconcile.ignore'|trans({}, 'ledger') }}</button>
+            </form>
+        </details>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="card muted">{{ 'reconcile.all_done'|trans({}, 'ledger') }}</div>
+    {% endfor %}
+
+    {% if done is not empty %}
+    <div class="card">
+        <strong>{{ 'reconcile.done'|trans({}, 'ledger') }}</strong>
+        <table>
+            {% for line in done %}
+            <tr>
+                <td>{{ line.bookedOn|date('d/m/Y') }}</td>
+                <td>{{ line.label }}</td>
+                <td class="num {{ line.amount > 0 ? 'in' : 'out' }}">{{ line.amount|ledger_money(line.currency) }}</td>
+                <td><span class="pill {{ line.status.value }}">{{ ('status.' ~ line.status.value)|trans({}, 'ledger') }}</span> {% if line.entry %}<span class="muted">{{ line.entry.number }}</span>{% endif %}</td>
+                <td class="num">
+                    {% if can_manage %}
+                    <form method="post" class="inline" action="{{ path('ledger_admin_reconcile_undo', {line: line.id}) }}" data-confirm="{{ 'reconcile.undo_confirm'|trans({}, 'ledger') }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('ledger_line_' ~ line.id) }}">
+                        <button class="btn btn-sm btn-link" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ 'reconcile.undo'|trans({}, 'ledger') }}</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

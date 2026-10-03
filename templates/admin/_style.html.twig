@@ -1,0 +1,37 @@
+{# Shared by the ledger's back-office pages: scoped under .ledger. #}
+<style>
+    .ledger { display: grid; gap: 1rem; }
+    .ledger .card { padding: 1rem 1.25rem; }
+    .ledger table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .ledger th, .ledger td { padding: .35rem .5rem; border-bottom: 1px solid var(--admin-border, rgba(127,127,127,.2)); text-align: left; vertical-align: top; }
+    .ledger th { font-weight: 600; opacity: .8; }
+    .ledger .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ledger .in { color: #1f8a4c; }
+    .ledger .out { color: #c0392b; }
+    .ledger .muted { opacity: .65; }
+    .ledger .pill { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .75rem; background: rgba(127,127,127,.15); white-space: nowrap; }
+    .ledger .pill.unmatched { background: rgba(252,104,117,.18); color: #b4303d; }
+    .ledger .pill.suggested { background: rgba(255,179,0,.2); color: #8a5a00; }
+    .ledger .pill.reconciled { background: rgba(31,138,76,.15); color: #1f8a4c; }
+    .ledger .pill.ignored { background: rgba(127,127,127,.15); }
+    .ledger .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .ledger .toolbar form { margin: 0; }
+    .ledger form.inline { display: inline; margin: 0; }
+    .ledger .periods { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+    .ledger .periods label { display: grid; gap: .2rem; font-size: .8rem; }
+    .ledger .periods label.check { display: flex; gap: .35rem; align-items: center; align-self: center; }
+    .ledger .statement tbody th { padding-top: .75rem; opacity: 1; }
+    .ledger .statement tbody td:first-child { padding-left: 1.25rem; }
+    .ledger .statement .muted.num { opacity: .55; }
+    .ledger .statement tfoot th { font-size: 1rem; opacity: 1; }
+    .ledger .statements { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1rem; align-items: start; }
+    /* Printed, a report is its tables: no admin chrome, no buttons, no period form. */
+    @media print {
+        .admin-aside, .admin-topbar, .admin-mobile-nav-backdrop, .admin-header-icon, .ledger .no-print, .ledger .periods { display: none !important; }
+        .admin-main { padding: 0 !important; }
+        .ledger { gap: .5rem; color: #000; }
+        .ledger .card { padding: 0; border: 0; box-shadow: none; break-inside: avoid; }
+        .ledger .statements { grid-template-columns: 1fr 1fr; }
+        .ledger a { color: inherit; text-decoration: none; }
+    }
+</style>
