@@ -12,6 +12,7 @@ use Base\Field\TextareaField;
 use Base\Field\TextField;
 use Base\Ledger\Controller\Admin\LedgerAdminTrait;
 use Base\Ledger\Entity\Account;
+use Base\Ledger\Entity\Party;
 use Base\Ledger\Entity\ReconciliationRule;
 use Base\Ledger\Enum\RuleSign;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
@@ -53,8 +54,8 @@ class ReconciliationRuleCrudController extends AbstractCrudController
         yield TextField::new('sign', 'Sens')->setColumns(3)
             ->setFormType(EnumType::class)->setFormTypeOptions(['class' => RuleSign::class])
             ->formatValue(fn ($value) => match ($value) { RuleSign::IN => 'entrées', RuleSign::OUT => 'sorties', default => 'tous' });
-        yield AssociationField::new('account', 'Compte')->setColumns(4);
-        yield AssociationField::new('party', 'Tiers')->setColumns(4);
+        yield $this->pick('account', 'Compte', Account::class, 'number')->setColumns(4);
+        yield $this->pick('party', 'Tiers', Party::class, 'name', false)->setColumns(4);
         yield TextareaField::new('split', 'Ventilation (JSON)')->hideOnIndex()->setColumns(12)
             ->setHelp('Facultatif : [{"account": "164", "amount": 85000}, {"account": "6611", "rest": true}] - "amount" en centimes, "percent", ou "rest" pour le reste.')
             ->setFormTypeOption('getter', fn (ReconciliationRule $rule) => null === $rule->getSplit() ? '' : json_encode($rule->getSplit(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_PRETTY_PRINT))

@@ -11,7 +11,9 @@ use Base\Field\DateTimeField;
 use Base\Field\IdField;
 use Base\Field\TextField;
 use Base\Ledger\Controller\Admin\LedgerAdminTrait;
+use Base\Ledger\Entity\Account;
 use Base\Ledger\Entity\BankAccount;
+use Base\Ledger\Entity\Journal;
 
 /**
  * The bank accounts, each with its ledger account (512x) and bank journal:
@@ -58,8 +60,8 @@ class BankAccountCrudController extends AbstractCrudController
         yield TextField::new('name', 'Nom')->setColumns(6);
         yield TextField::new('iban', 'IBAN')->setColumns(6)->formatValue(fn ($value) => BankAccount::mask($value));
         yield AssociationField::new('connection', 'Connexion')->hideOnForm();
-        yield AssociationField::new('account', 'Compte (512)')->setColumns(6);
-        yield AssociationField::new('journal', 'Journal')->setColumns(6);
+        yield $this->pick('account', 'Compte (512)', Account::class, 'number')->setColumns(6);
+        yield $this->pick('journal', 'Journal', Journal::class, 'code')->setColumns(6);
         yield TextField::new('currency', 'Devise')->hideOnForm();
         yield TextField::new('bankBalance', 'Solde banque')->hideOnForm()
             ->formatValue(fn ($value, BankAccount $account) => null === $account->getBankBalance() ? null : number_format($account->getBankBalance() / 100, 2, ',', ' ').' '.$account->getCurrency());
