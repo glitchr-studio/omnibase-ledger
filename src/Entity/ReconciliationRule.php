@@ -6,6 +6,7 @@ use Base\Ledger\Enum\RuleSign;
 use Base\Ledger\Model\Text;
 use Base\Ledger\Repository\ReconciliationRuleRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * What to post a recurring bank line against when nothing open matches it:
@@ -32,6 +33,8 @@ class ReconciliationRule
     private Book $book;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     private string $name;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -77,8 +80,9 @@ class ReconciliationRule
 
     public function getId(): ?int { return $this->id; }
     public function getBook(): Book { return $this->book; }
+    public function setBook(Book $book): self { $this->book = $book; return $this; }
     public function getName(): string { return $this->name; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
+    public function setName(?string $name): self { $this->name = (string) $name; return $this; }
     public function getPattern(): ?string { return $this->pattern; }
     public function setPattern(?string $pattern): self { $this->pattern = $pattern; return $this; }
     public function getIban(): ?string { return $this->iban; }

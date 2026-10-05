@@ -4,6 +4,7 @@ namespace Base\Ledger\Entity;
 
 use Base\Ledger\Repository\BookRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * One legal entity's accounts (a company, an SCI): its chart, journals,
@@ -19,6 +20,8 @@ class Book
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     private string $name;
 
     /** The SIREN (9 digits): the FEC's file name starts with it. */
@@ -49,11 +52,11 @@ class Book
 
     public function getId(): ?int { return $this->id; }
     public function getName(): string { return $this->name; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
+    public function setName(?string $name): self { $this->name = (string) $name; return $this; }
     public function getSiren(): ?string { return $this->siren; }
     public function setSiren(?string $siren): self { $siren = null === $siren ? null : preg_replace('/\D/', '', $siren); $this->siren = '' === $siren ? null : $siren; return $this; }
     public function getCurrency(): string { return $this->currency; }
-    public function setCurrency(string $currency): self { $this->currency = strtoupper($currency); return $this; }
+    public function setCurrency(?string $currency): self { $this->currency = strtoupper(trim((string) $currency)) ?: 'EUR'; return $this; }
     public function getLockedUntil(): ?\DateTimeImmutable { return $this->lockedUntil; }
     public function setLockedUntil(?\DateTimeImmutable $lockedUntil): self { $this->lockedUntil = $lockedUntil?->setTime(0, 0); return $this; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }

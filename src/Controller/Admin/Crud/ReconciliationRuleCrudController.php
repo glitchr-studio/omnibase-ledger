@@ -44,7 +44,7 @@ class ReconciliationRuleCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->onlyOnIndex();
-        yield AssociationField::new('book', 'Livre')->setColumns(4);
+        yield AssociationField::new('book', 'Livre')->setColumns(4)->setDisabled(Crud::PAGE_EDIT === $pageName);
         yield TextField::new('name', 'Nom')->setColumns(4);
         yield IntegerField::new('priority', 'Priorité')->setColumns(2);
         yield BooleanField::new('enabled', 'Active')->setColumns(2);

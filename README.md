@@ -28,7 +28,7 @@ Double-entry accounting for [omnibase](https://github.com/glitchr-studio/omnibas
 
   Every report counts draft entries as well as validated ones: they say what the books say today. The statements print without the admin's chrome and download as CSV (`?format=csv`).
 - **Back office** (omnibase/admin):
-  - CRUD screens for every entity
+  - CRUD screens for every entity. A record is created from its "new" form (books, journals, accounts, fiscal years, parties, reconciliation rules); its book - and a journal's code, an account's number - are chosen then and only shown on "edit". What the database would refuse is said by the form: a second journal of the same code in a book, a second account of the same number, a fiscal year that ends before it starts, a party's reference already taken. A party's auxiliary account left empty is numbered from its kind and reference (411…, 401…)
   - the reconciliation page, statement upload, bank connection
   - the reports
   - two dashboard widgets

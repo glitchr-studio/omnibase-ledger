@@ -40,8 +40,10 @@
         "symfony/config": "^6.0|^7.0|^8.0",
         "symfony/console": "^6.0|^7.0|^8.0",
         "symfony/dependency-injection": "^6.0|^7.0|^8.0",
+        "symfony/doctrine-bridge": "^6.0|^7.0|^8.0",
         "symfony/http-kernel": "^6.0|^7.0|^8.0",
-        "symfony/security-bundle": "^6.0|^7.0|^8.0"
+        "symfony/security-bundle": "^6.0|^7.0|^8.0",
+        "symfony/validator": "^6.0|^7.0|^8.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5|^11.0|^12.0",

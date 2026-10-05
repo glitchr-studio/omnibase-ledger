@@ -2,6 +2,7 @@
 
 namespace Base\Ledger\Controller\Admin\Crud;
 
+use Base\Admin\Config\Crud;
 use Base\Admin\Controller\AbstractCrudController;
 use Base\Admin\Filter\Filter;
 use Base\Admin\Filter\Filters;
@@ -45,8 +46,9 @@ class AccountCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->onlyOnIndex();
-        yield AssociationField::new('book', 'Livre')->setColumns(3);
-        yield TextField::new('number', 'Numéro')->setColumns(3);
+        // Its book and its number are an account's identity: chosen when it is created, shown afterwards.
+        yield AssociationField::new('book', 'Livre')->setColumns(3)->setDisabled(Crud::PAGE_EDIT === $pageName);
+        yield TextField::new('number', 'Numéro')->setColumns(3)->setDisabled(Crud::PAGE_EDIT === $pageName);
         yield TextField::new('label', 'Intitulé')->setColumns(6);
         yield TextField::new('type', 'Nature')->setColumns(3)
             ->setFormType(EnumType::class)->setFormTypeOptions(['class' => AccountType::class])

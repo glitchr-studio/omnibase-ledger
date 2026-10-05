@@ -34,8 +34,9 @@ class JournalCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id')->onlyOnIndex();
-        yield AssociationField::new('book', 'Livre')->setColumns(4);
-        yield TextField::new('code', 'Code')->setColumns(2);
+        // Its book and its code are a journal's identity: chosen when it is created, shown afterwards.
+        yield AssociationField::new('book', 'Livre')->setColumns(4)->setDisabled(Crud::PAGE_EDIT === $pageName);
+        yield TextField::new('code', 'Code')->setColumns(2)->setDisabled(Crud::PAGE_EDIT === $pageName);
         yield TextField::new('label', 'Intitulé')->setColumns(6);
     }
 

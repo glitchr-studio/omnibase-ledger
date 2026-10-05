@@ -5,6 +5,8 @@ namespace Base\Ledger\Entity;
 use Base\Ledger\Enum\AccountType;
 use Base\Ledger\Repository\AccountRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * An account of a book's chart, by its PCG number: 512 (bank), 706
@@ -14,6 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AccountRepository::class)]
 #[ORM\Table(name: 'ledger_account')]
 #[ORM\UniqueConstraint(name: 'ledger_account_number', fields: ['book', 'number'])]
+#[UniqueEntity(fields: ['book', 'number'], errorPath: 'number', message: 'Ce livre a déjà un compte de ce numéro.')]
 class Account
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
@@ -24,9 +27,13 @@ class Account
     private Book $book;
 
     #[ORM\Column(length: 20)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 20)]
     private string $number;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     private string $label;
 
     #[ORM\Column(length: 16, enumType: AccountType::class)]
@@ -53,9 +60,12 @@ class Account
 
     public function getId(): ?int { return $this->id; }
     public function getBook(): Book { return $this->book; }
+    /** An account is given its book and its number when it is created: the back office's "new" form writes them, its "edit" form shows them. */
+    public function setBook(Book $book): self { $this->book = $book; return $this; }
     public function getNumber(): string { return $this->number; }
+    public function setNumber(?string $number): self { $this->number = self::normalize((string) $number); return $this; }
     public function getLabel(): string { return $this->label; }
-    public function setLabel(string $label): self { $this->label = $label; return $this; }
+    public function setLabel(?string $label): self { $this->label = (string) $label; return $this; }
     public function getType(): AccountType { return $this->type; }
     public function setType(AccountType $type): self { $this->type = $type; return $this; }
 

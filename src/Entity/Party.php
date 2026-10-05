@@ -5,6 +5,8 @@ namespace Base\Ledger\Entity;
 use Base\Ledger\Enum\PartyKind;
 use Base\Ledger\Repository\PartyRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Someone the book owes or is owed by - a tenant, a supplier, an associate -
@@ -15,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: PartyRepository::class)]
 #[ORM\Table(name: 'ledger_party')]
 #[ORM\UniqueConstraint(name: 'ledger_party_reference', fields: ['book', 'reference'])]
+#[UniqueEntity(fields: ['book', 'reference'], errorPath: 'reference', ignoreNull: true, message: 'Ce livre a déjà un tiers de cette référence.')]
 #[ORM\Index(name: 'ledger_party_iban', fields: ['iban'])]
 class Party
 {
@@ -29,6 +32,8 @@ class Party
     private PartyKind $kind;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     private string $name;
 
     #[ORM\Column(length: 34, nullable: true)]
@@ -69,16 +74,18 @@ class Party
 
     public function getId(): ?int { return $this->id; }
     public function getBook(): Book { return $this->book; }
+    public function setBook(Book $book): self { $this->book = $book; return $this; }
     public function getKind(): PartyKind { return $this->kind; }
     public function setKind(PartyKind $kind): self { $this->kind = $kind; return $this; }
     public function getName(): string { return $this->name; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
+    public function setName(?string $name): self { $this->name = (string) $name; return $this; }
     public function getIban(): ?string { return $this->iban; }
     public function setIban(?string $iban): self { $this->iban = self::normalizeIban($iban); return $this; }
     public function getReference(): ?string { return $this->reference; }
-    public function setReference(?string $reference): self { $this->reference = $reference; return $this; }
+    public function setReference(?string $reference): self { $this->reference = '' === trim((string) $reference) ? null : trim($reference); return $this; }
     public function getAccountNumber(): string { return $this->accountNumber; }
     /** Before its first entry only: lines already posted stay on the old account. */
-    public function setAccountNumber(string $accountNumber): self { $this->accountNumber = Account::normalize($accountNumber); return $this; }
+    /** Left empty (a form gives null), the back office numbers it from the party's kind and reference when it is saved. */
+    public function setAccountNumber(?string $accountNumber): self { $this->accountNumber = Account::normalize((string) $accountNumber); return $this; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 }
