@@ -196,4 +196,4 @@ vendor/bin/phpunit   # standalone, or from a host: vendor/bin/phpunit -c vendor/
 
 ## Licence
 
-LGPL-3.0-or-later.
+MIT since 2026-10-09; earlier versions remain published under LGPL-3.0-or-later.
